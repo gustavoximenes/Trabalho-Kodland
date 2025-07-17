@@ -1,32 +1,46 @@
-import math
+import os
 import pygame
-from pygame import Rect
 import pgzrun
 
+# Inicializa pygame
+pygame.init()
+
+# Tamanho da janela
 WIDTH = 800
 HEIGHT = 600
 
-# Constantes de física
+# Física
 GRAVITY = 0.5
 JUMP_STRENGTH = -10
 MOVE_SPEED = 5
 
-# Plataforma (chão)
-ground = Rect(0, HEIGHT - 50, WIDTH, 50)
+ground_y = HEIGHT - 50
 
-# Herói
+# Caminho fixo para a pasta images
+IMAGES_PATH = r"C:\Users\Gustavo\Documents\Projeto-Kodland\Python-game\images"
+
 class Hero:
+    SCALE = 4  # Aumenta o tamanho do personagem
+
     def __init__(self):
-        # Apenas 2 frames para cada animação
-        self.anim_idle = ["hero_idle1", "hero_idle2"]
-        self.anim_run = ["hero_run1", "hero_run2"]
-        self.actor = Actor(self.anim_idle[0])
-        self.actor.pos = (100, HEIGHT - 100)
+        self.anim_idle = [self.load_and_scale(f"hero_idle{i}.png") for i in [1, 2]]
+        self.anim_run = [self.load_and_scale(f"hero_run{i}.png") for i in [1, 2]]
+
+        self.x = 100
+        self.y = ground_y - self.anim_idle[0].get_height() // 2
         self.vel_y = 0
         self.on_ground = False
         self.frame = 0
         self.anim_timer = 0
-        self.state = "idle"  # ou "run"
+        self.state = "idle"
+
+    def load_and_scale(self, filename):
+        path = os.path.join(IMAGES_PATH, filename)
+        print(f"Tentando carregar imagem: {path}")
+        img = pygame.image.load(path).convert_alpha()
+        w = int(img.get_width() * self.SCALE)
+        h = int(img.get_height() * self.SCALE)
+        return pygame.transform.scale(img, (w, h))
 
     def update(self):
         self.move()
@@ -37,10 +51,10 @@ class Hero:
     def move(self):
         moving = False
         if keyboard.left:
-            self.actor.x -= MOVE_SPEED
+            self.x -= MOVE_SPEED
             moving = True
         if keyboard.right:
-            self.actor.x += MOVE_SPEED
+            self.x += MOVE_SPEED
             moving = True
 
         if keyboard.space and self.on_ground:
@@ -51,41 +65,39 @@ class Hero:
 
     def apply_gravity(self):
         self.vel_y += GRAVITY
-        self.actor.y += self.vel_y
+        self.y += self.vel_y
 
     def check_collision(self):
-        if self.actor.y >= ground.top - self.actor.height // 2:
-            self.actor.y = ground.top - self.actor.height // 2
+        if self.y >= ground_y - self.anim_idle[0].get_height() // 2:
+            self.y = ground_y - self.anim_idle[0].get_height() // 2
             self.vel_y = 0
             self.on_ground = True
 
     def animate(self):
         self.anim_timer += 1
-        if self.anim_timer >= 10:  # troca de frame a cada 10 ticks
+        if self.anim_timer >= 10:
             self.anim_timer = 0
-            self.frame = (self.frame + 1) % 2  # só dois quadros por animação
-
-            if self.state == "idle":
-                self.actor.image = self.anim_idle[self.frame]
-            elif self.state == "run":
-                self.actor.image = self.anim_run[self.frame]
+            self.frame = (self.frame + 1) % 2
 
     def draw(self):
-        self.actor.draw()
+        img = self.anim_idle[self.frame] if self.state == "idle" else self.anim_run[self.frame]
+        rect = img.get_rect()
+        rect.center = (self.x, self.y)
+        screen.surface.blit(img, rect)
 
-# Instância do herói
+# Cria o herói
 hero = Hero()
+
+# Carrega e escala o fundo
+bg_path = os.path.join(IMAGES_PATH, "background.png")
+background_img = pygame.image.load(bg_path).convert()
+background_scaled = pygame.transform.scale(background_img, (WIDTH, HEIGHT))
 
 def update():
     hero.update()
 
 def draw():
-    screen.clear()
-
-    # Redimensiona e desenha o fundo para cobrir toda a tela
-    bg_scaled = pygame.transform.scale(images.background, (WIDTH, HEIGHT))
-    screen.surface.blit(bg_scaled, (0, 0))
-
+    screen.surface.blit(background_scaled, (0, 0))  # fundo cobre a tela
     hero.draw()
 
 pgzrun.go()
