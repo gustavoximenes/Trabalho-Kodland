@@ -5,34 +5,35 @@ import pgzrun
 # Inicializa pygame
 pygame.init()
 
-# Tamanho da janela
 WIDTH = 800
 HEIGHT = 600
 
-# Física
 GRAVITY = 0.5
 JUMP_STRENGTH = -10
 MOVE_SPEED = 5
 
-ground_y = HEIGHT - 50
-
-# Caminho fixo para a pasta images
+# Caminho fixo para imagens
 IMAGES_PATH = r"C:\Users\Gustavo\Documents\Projeto-Kodland\Python-game\images"
 
+# Retângulo de colisão do chão
+GROUND_RECT = pygame.Rect(0, 472, WIDTH, HEIGHT - 472)
+
 class Hero:
-    SCALE = 4  # Aumenta o tamanho do personagem
+    SCALE = 3
 
     def __init__(self):
         self.anim_idle = [self.load_and_scale(f"hero_idle{i}.png") for i in [1, 2]]
         self.anim_run = [self.load_and_scale(f"hero_run{i}.png") for i in [1, 2]]
 
         self.x = 100
-        self.y = ground_y - self.anim_idle[0].get_height() // 2
+        self.image_height = self.anim_idle[0].get_height()
+        self.y = GROUND_RECT.top - self.image_height // 2
         self.vel_y = 0
         self.on_ground = False
         self.frame = 0
         self.anim_timer = 0
         self.state = "idle"
+        self.facing_right = True  # Direção inicial
 
     def load_and_scale(self, filename):
         path = os.path.join(IMAGES_PATH, filename)
@@ -53,9 +54,11 @@ class Hero:
         if keyboard.left:
             self.x -= MOVE_SPEED
             moving = True
+            self.facing_right = False
         if keyboard.right:
             self.x += MOVE_SPEED
             moving = True
+            self.facing_right = True
 
         if keyboard.space and self.on_ground:
             self.vel_y = JUMP_STRENGTH
@@ -68,10 +71,13 @@ class Hero:
         self.y += self.vel_y
 
     def check_collision(self):
-        if self.y >= ground_y - self.anim_idle[0].get_height() // 2:
-            self.y = ground_y - self.anim_idle[0].get_height() // 2
+        bottom_y = self.y + self.image_height // 2
+        if bottom_y >= GROUND_RECT.top:
+            self.y = GROUND_RECT.top - self.image_height // 2
             self.vel_y = 0
             self.on_ground = True
+        else:
+            self.on_ground = False
 
     def animate(self):
         self.anim_timer += 1
@@ -80,12 +86,14 @@ class Hero:
             self.frame = (self.frame + 1) % 2
 
     def draw(self):
-        img = self.anim_idle[self.frame] if self.state == "idle" else self.anim_run[self.frame]
+        img_list = self.anim_idle if self.state == "idle" else self.anim_run
+        img = img_list[self.frame]
+        if not self.facing_right:
+            img = pygame.transform.flip(img, True, False)  # Inverte a imagem horizontalmente
         rect = img.get_rect()
         rect.center = (self.x, self.y)
         screen.surface.blit(img, rect)
 
-# Cria o herói
 hero = Hero()
 
 # Carrega e escala o fundo
@@ -97,7 +105,8 @@ def update():
     hero.update()
 
 def draw():
-    screen.surface.blit(background_scaled, (0, 0))  # fundo cobre a tela
+    screen.surface.blit(background_scaled, (0, 0))
     hero.draw()
+    
 
 pgzrun.go()
